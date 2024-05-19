@@ -1,0 +1,42 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>WebGPU Life</title>
+  </head>
+  
+  <body>
+    <canvas width="1024" height="1024"></canvas>
+	
+	<!-- type of module lets us use top-level awaits -->
+    <script type="module">
+		const adapter = await navigator.gpu.requestAdapter()
+		if (!navigator.gpu) throw new Error("WebGPU not supported on this browser :(");
+		if (!adapter) throw new Error("no GPUAdapter found :(");
+	
+		const device = await adapter.requestDevice();
+		
+		// set up canvas with chosen device and texture format
+		const canvas = document.querySelector("canvas")
+		const context = canvas.getContext("webgpu")
+		context.configure( {device: device, format: navigator.gpu.getPreferredCanvasFormat()} )
+		
+		const encoder = device.createCommandEncoder()
+		const pass = encoder.beginRenderPass({
+			colorAttachments: [{
+				view: context.getCurrentTexture().createView(),
+				loadOp: "clear",
+				clearValue: [1, 0, 1, 1],
+				storeOp: "store",
+			}]
+		})
+		pass.end()
+		
+		// create buffer of commands that the GPU needs to do in order to do what we said up above
+		let commandBuffer = encoder.finish() // note command buffers are transient and single-use.
+		// submit the command buffer to the GPU, actually running them.
+		device.queue.submit([commandBuffer])
+    </script>
+  </body>
+</html>
