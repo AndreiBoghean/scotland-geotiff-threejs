@@ -1,0 +1,142 @@
+<html>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
+
+<body>
+	<h1>hello</h1>
+</body>
+
+<script type="module">
+
+/*
+const available_tiffs = `ASTGTMV003_N55W002_dem.tif
+ASTGTMV003_N55W003_dem.tif
+ASTGTMV003_N55W004_dem.tif
+ASTGTMV003_N55W005_dem.tif
+ASTGTMV003_N55W006_dem.tif
+ASTGTMV003_N55W007_dem.tif
+ASTGTMV003_N55W008_dem.tif
+ASTGTMV003_N56W003_dem.tif
+ASTGTMV003_N56W004_dem.tif
+ASTGTMV003_N56W005_dem.tif
+ASTGTMV003_N56W006_dem.tif
+ASTGTMV003_N56W007_dem.tif
+ASTGTMV003_N56W008_dem.tif
+ASTGTMV003_N57W002_dem.tif
+ASTGTMV003_N57W003_dem.tif
+ASTGTMV003_N57W004_dem.tif
+ASTGTMV003_N57W005_dem.tif
+ASTGTMV003_N57W006_dem.tif
+ASTGTMV003_N57W007_dem.tif
+ASTGTMV003_N57W008_dem.tif
+ASTGTMV003_N58W003_dem.tif
+ASTGTMV003_N58W004_dem.tif
+ASTGTMV003_N58W005_dem.tif
+ASTGTMV003_N58W006_dem.tif
+ASTGTMV003_N58W007_dem.tif
+ASTGTMV003_N58W008_dem.tif
+ASTGTMV003_N59W002_dem.tif
+ASTGTMV003_N59W003_dem.tif
+ASTGTMV003_N59W004_dem.tif
+ASTGTMV003_N59W005_dem.tif
+ASTGTMV003_N59W006_dem.tif
+ASTGTMV003_N59W007_dem.tif`
+//*/
+
+///*
+const available_tiffs = `ASTGTMV003_N55W003_dem.tif
+ASTGTMV003_N55W004_dem.tif
+ASTGTMV003_N56W003_dem.tif
+ASTGTMV003_N56W004_dem.tif`
+//*/
+
+// const available_tiffs = `ASTGTMV003_N55W003_dem.tif`
+
+  async function mountGeoTiff(url, scene)
+  {
+	// get tif and load it
+    const tiff = await GeoTIFF.fromUrl(url);
+    const tiff_image = await tiff.getImage();
+    const data = await tiff_image.readRasters();
+	
+    // create suitable planeGeometry and add it to scene
+    const scale = 10000/Math.max(tiff_image.getWidth(), tiff_image.getHeight())
+    const geometry = new THREE.PlaneGeometry(scale*tiff_image.getWidth(), scale*tiff_image.getHeight(), tiff_image.getWidth()-1, tiff_image.getHeight()-1);
+    const material = new THREE.MeshNormalMaterial( { side: THREE.DoubleSide } );
+    const plane = new THREE.Mesh(geometry, material);
+    plane.rotation.x -= 1.571; // 90 degrees in radians
+    scene.add(plane)
+    
+    // set plane vertices to that of the tif data
+    for (let i=0 ; i <= data[0].length ; i++ )
+        geometry.attributes.position.array[i*3+2] = data[0][i];
+	geometry.attributes.position.needsUpdate = true;
+    geometry.computeVertexNormals(); // needed for meshnormalmaterial
+	
+	return plane;
+  }
+
+  // create three.js scene+renderer and add camera+orbitcontrols
+  import * as THREE from "three";
+  const scene = new THREE.Scene();
+  
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth/2, window.innerHeight/2);
+  document.body.appendChild(renderer.domElement);
+  
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 200000);
+  camera.position.z = 5000;
+  
+  import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+  const controls = new OrbitControls( camera, renderer.domElement );
+  
+  // define and start animation loop
+  function animate() {
+	requestAnimationFrame( animate );
+	
+	//plane.rotation.x += 0.01;
+	//plane.rotation.y += 0.01;
+
+	controls.update();
+	renderer.render( scene, camera );
+  }
+  animate();
+  
+  // load tiffs into scene and position correctly according to lat/long
+  let attemptList = available_tiffs.split("\n")
+  while (attemptList.length > 0)
+  {
+    let filename = attemptList.pop()
+	try {
+		console.log(filename);
+		// continue;
+		const longitude = parseInt(filename.slice(12, 12+2))
+		const latitude = parseInt(filename.slice(15, 15+3))
+		console.log("long:", longitude, "lat:", latitude)
+		const test1 = await mountGeoTiff("/geotiff_data/" + filename, scene);
+		test1.translateY(test1.geometry.parameters.width*(longitude-55));
+		test1.translateX(-test1.geometry.parameters.height*(latitude-2));
+		// const test2 = await mountGeoTiff("/geotiff_data/ASTGTMV003_N55W006_dem.tif", scene);
+	}
+	catch (e)
+	{
+		console.log("encountered error")
+		console.log(e)
+		console.log("while loading", filename)
+		//console.log("retrying...")
+		//attemptList.push(filename)
+	}
+  }
+  
+  
+</script>
+
+</html>
