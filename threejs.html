@@ -60,28 +60,50 @@ ASTGTMV003_N56W004_dem.tif`
 
 // const available_tiffs = `ASTGTMV003_N55W003_dem.tif`
 
-  async function mountGeoTiff(url, scene)
+  async function tiff_load(url)
   {
-	// get tif and load it
-    const tiff = await GeoTIFF.fromUrl(url);
-    const tiff_image = await tiff.getImage();
-    const data = await tiff_image.readRasters();
-	
-    // create suitable planeGeometry and add it to scene
-    const scale = 10000/Math.max(tiff_image.getWidth(), tiff_image.getHeight())
-    const geometry = new THREE.PlaneGeometry(scale*tiff_image.getWidth(), scale*tiff_image.getHeight(), tiff_image.getWidth()-1, tiff_image.getHeight()-1);
-    const material = new THREE.MeshNormalMaterial( { side: THREE.DoubleSide } );
-    const plane = new THREE.Mesh(geometry, material);
-    plane.rotation.x -= 1.571; // 90 degrees in radians
-    scene.add(plane)
-    
-    // set plane vertices to that of the tif data
-    for (let i=0 ; i <= data[0].length ; i++ )
-        geometry.attributes.position.array[i*3+2] = data[0][i];
-	geometry.attributes.position.needsUpdate = true;
-    geometry.computeVertexNormals(); // needed for meshnormalmaterial
-	
-	return plane;
+    return new Promise( function(resolve) {
+	    const worker = new Worker("plsWorker.js");
+	    worker.postMessage(url);
+	    worker.onmessage = (e) => {resolve(e.data)}
+    });
+  }
+
+  function mountGeoTiff(url, scene)
+  {
+    // return new Promise( async (a, b) => {
+		// get tif and load it
+		// const [tiff_image, data, BoundingBox] = await tiff_load(url);
+		tiff_load(url).then( ([tiff_image, data, BoundingBox]) => {
+			// create suitable planeGeometry and add it to scene
+			// const scale = 10000/Math.max(tiff_image.getWidth(), tiff_image.getHeight())
+			const scale = 10000/Math.max(tiff_image.fileDirectory.ImageWidth, tiff_image.fileDirectory.ImageLength)
+			// const geometry = new THREE.PlaneGeometry(scale*tiff_image.getWidth(), scale*tiff_image.getHeight(), tiff_image.getWidth()-1, tiff_image.getHeight()-1);
+			const geometry = new THREE.PlaneGeometry(scale*tiff_image.fileDirectory.ImageWidth, scale*tiff_image.fileDirectory.ImageLength, tiff_image.fileDirectory.ImageWidth-1, tiff_image.fileDirectory.ImageLength-1);
+			const material = new THREE.MeshNormalMaterial( { side: THREE.DoubleSide } );
+			const plane = new THREE.Mesh(geometry, material);
+			plane.rotation.x -= 1.571; // 90 degrees in radians
+			scene.add(plane)
+			
+			// set plane vertices to that of the tif data
+			for (let i=0 ; i <= data[0].length ; i++ )
+				geometry.attributes.position.array[i*3+2] = data[0][i];
+			geometry.attributes.position.needsUpdate = true;
+			geometry.computeVertexNormals(); // needed for meshnormalmaterial
+			
+			// const longitude = parseInt(filename.slice(12, 12+2))
+			// const latitude = parseInt(filename.slice(15, 15+3))
+			// const longitude = tiff_image.getBoundingBox()[1]
+			// const latitude = -tiff_image.getBoundingBox()[0]
+			const longitude = BoundingBox[1]
+			const latitude = -BoundingBox[0]
+			console.log("long:", longitude, "lat:", latitude)
+			plane.translateY(plane.geometry.parameters.width*(longitude-55));
+			plane.translateX(-plane.geometry.parameters.height*(latitude-2));
+					
+			// return plane;
+		})
+	// })
   }
 
   // create three.js scene+renderer and add camera+orbitcontrols
@@ -115,16 +137,11 @@ ASTGTMV003_N56W004_dem.tif`
   while (attemptList.length > 0)
   {
     let filename = attemptList.pop()
+	console.log("we spinning for", filename)
+	
 	try {
 		console.log(filename);
-		// continue;
-		const longitude = parseInt(filename.slice(12, 12+2))
-		const latitude = parseInt(filename.slice(15, 15+3))
-		console.log("long:", longitude, "lat:", latitude)
-		const test1 = await mountGeoTiff("/geotiff_data/" + filename, scene);
-		test1.translateY(test1.geometry.parameters.width*(longitude-55));
-		test1.translateX(-test1.geometry.parameters.height*(latitude-2));
-		// const test2 = await mountGeoTiff("/geotiff_data/ASTGTMV003_N55W006_dem.tif", scene);
+		mountGeoTiff("/geotiff_data/" + filename, scene);
 	}
 	catch (e)
 	{
@@ -134,8 +151,10 @@ ASTGTMV003_N56W004_dem.tif`
 		//console.log("retrying...")
 		//attemptList.push(filename)
 	}
+	console.log("we done for", filename);
   }
   
+  console.log("script has logged off")
   
 </script>
 
