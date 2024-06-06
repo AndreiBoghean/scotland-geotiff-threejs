@@ -1,10 +1,10 @@
-importScripts("geotiff.js")
+import './geotiff.js';
+
 onmessage = async (something) => {
 	try {
   const url = something.data;
   const workerResult = `Result: ${url}`;
   console.log("meester worker got", workerResult);
-  
   
   const tiff = await GeoTIFF.fromUrl(url);
   const tiff_image = await tiff.getImage();
