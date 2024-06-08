@@ -10,8 +10,7 @@ onmessage = async (something) => {
 		for (let i = 0; i <= tiffData[0].length; i++)
 			planeData[i * 3 + 2] = tiffData[0][i];
 		
-		console.log("processed.");
-		postMessage(["we're done", planeData.buffer], [planeData.buffer]);
+		postMessage(planeData.buffer, [planeData.buffer]);
 	} catch (e) {
 		console.log("plsWorker issue:", e);
 	}

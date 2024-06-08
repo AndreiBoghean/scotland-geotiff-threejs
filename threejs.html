@@ -2,122 +2,24 @@
    <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+		  "three": "./three.module.js",
           "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
         }
       }
    </script>
+   <script src="./papaparse.min.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
-   <body>
-      <h1>hello</h1>
-   </body>
+   
    <script type="module">
-      /*
-      const available_tiffs = `ASTGTMV003_N55W002_dem.tif
-      ASTGTMV003_N55W003_dem.tif
-      ASTGTMV003_N55W004_dem.tif
-      ASTGTMV003_N55W005_dem.tif
-      ASTGTMV003_N55W006_dem.tif
-      ASTGTMV003_N55W007_dem.tif
-      ASTGTMV003_N55W008_dem.tif
-      ASTGTMV003_N56W003_dem.tif
-      ASTGTMV003_N56W004_dem.tif
-      ASTGTMV003_N56W005_dem.tif
-      ASTGTMV003_N56W006_dem.tif
-      ASTGTMV003_N56W007_dem.tif
-      ASTGTMV003_N56W008_dem.tif
-      ASTGTMV003_N57W002_dem.tif
-      ASTGTMV003_N57W003_dem.tif
-      ASTGTMV003_N57W004_dem.tif
-      ASTGTMV003_N57W005_dem.tif
-      ASTGTMV003_N57W006_dem.tif
-      ASTGTMV003_N57W007_dem.tif
-      ASTGTMV003_N57W008_dem.tif
-      ASTGTMV003_N58W003_dem.tif
-      ASTGTMV003_N58W004_dem.tif
-      ASTGTMV003_N58W005_dem.tif
-      ASTGTMV003_N58W006_dem.tif
-      ASTGTMV003_N58W007_dem.tif
-      ASTGTMV003_N58W008_dem.tif
-      ASTGTMV003_N59W002_dem.tif
-      ASTGTMV003_N59W003_dem.tif
-      ASTGTMV003_N59W004_dem.tif
-      ASTGTMV003_N59W005_dem.tif
-      ASTGTMV003_N59W006_dem.tif
-      ASTGTMV003_N59W007_dem.tif`
-      //*/
-
-      ///*
-      const available_tiffs = `ASTGTMV003_N55W003_dem.tif
-      ASTGTMV003_N55W004_dem.tif
-      ASTGTMV003_N55W005_dem.tif
-      ASTGTMV003_N56W003_dem.tif
-      ASTGTMV003_N56W004_dem.tif
-      ASTGTMV003_N56W005_dem.tif
-      ASTGTMV003_N57W003_dem.tif
-      ASTGTMV003_N57W004_dem.tif
-      ASTGTMV003_N57W005_dem.tif`
-      //*/
-
-      /*
-      const available_tiffs = `ASTGTMV003_N55W003_dem.tif
-      ASTGTMV003_N55W004_dem.tif
-      ASTGTMV003_N56W003_dem.tif
-      ASTGTMV003_N56W004_dem.tif`
-      //*/
-
-      //const available_tiffs = `ASTGTMV003_N55W003_dem.tif`
-
-      async function tiff_load(url) {
-      	return new Promise(function(resolve) {
-      		const worker = new Worker("plsWorker.js", {
-      			type: "module"
-      		});
-      		worker.onmessage = (e) => {
-      			resolve(e.data)
-      		}
-      		worker.postMessage(url);
-      	});
-      }
-
-      function mountGeoTiff(url, scene) {
-      	// get tif and load it
-      	tiff_load(url).then(([tiff_image, data, BoundingBox]) => {
-      		const worker = new Worker("otherPlsWorker.js", {
-      			type: "module"
-      		})
-
-      		// create suitable planeGeometry and add it to scene
-      		const scale = 10000 / Math.max(tiff_image.fileDirectory.ImageWidth, tiff_image.fileDirectory.ImageLength)
-      		const geometry = new THREE.PlaneGeometry(scale * tiff_image.fileDirectory.ImageWidth, scale * tiff_image.fileDirectory.ImageLength, tiff_image.fileDirectory.ImageWidth - 1, tiff_image.fileDirectory.ImageLength - 1);
-      		const material = new THREE.MeshNormalMaterial({
-      			side: THREE.DoubleSide
-      		});
-      		const plane = new THREE.Mesh(geometry, material);
-      		plane.rotation.x -= 1.571; // 90 degrees in radians
-
-
-      		worker.onmessage = (e) => {
-      			console.log("we got something from otherplsworker", e);
-      			console.log("testArr:", new Float32Array(e.data[1]))
-      			// geometry.attributes.position.array = new Float32Array(e.data[1]);
-      			geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(e.data[1]), 3))
-
-      			geometry.attributes.position.needsUpdate = true;
-      			geometry.computeVertexNormals(); // needed for meshnormalmaterial
-
-      			const longitude = BoundingBox[1]
-      			const latitude = -BoundingBox[0]
-      			console.log("long:", longitude, "lat:", latitude)
-      			scene.add(plane)
-      			plane.translateY(plane.geometry.parameters.width * (longitude - 55));
-      			plane.translateX(-plane.geometry.parameters.height * (latitude - 2));
-      		};
-      		console.log("about to post to otherWorker")
-      		worker.postMessage([data, geometry.attributes.position.array.buffer], [geometry.attributes.position.array.buffer])
-
-      	})
-      }
+	// const available_tiffs1 = `ASTGTMV003_N55W002_dem.tif,ASTGTMV003_N55W003_dem.tif,ASTGTMV003_N55W004_dem.tif,ASTGTMV003_N55W005_dem.tif,ASTGTMV003_N55W006_dem.tif,ASTGTMV003_N55W007_dem.tif,ASTGTMV003_N55W008_dem.tif,ASTGTMV003_N56W003_dem.tif,ASTGTMV003_N56W004_dem.tif,ASTGTMV003_N56W005_dem.tif,ASTGTMV003_N56W006_dem.tif,ASTGTMV003_N56W007_dem.tif,ASTGTMV003_N56W008_dem.tif,ASTGTMV003_N57W002_dem.tif,ASTGTMV003_N57W003_dem.tif,ASTGTMV003_N57W004_dem.tif,ASTGTMV003_N57W005_dem.tif,ASTGTMV003_N57W006_dem.tif,ASTGTMV003_N57W007_dem.tif,ASTGTMV003_N57W008_dem.tif,ASTGTMV003_N58W003_dem.tif,ASTGTMV003_N58W004_dem.tif,ASTGTMV003_N58W005_dem.tif,ASTGTMV003_N58W006_dem.tif,ASTGTMV003_N58W007_dem.tif,ASTGTMV003_N58W008_dem.tif,ASTGTMV003_N59W002_dem.tif,ASTGTMV003_N59W003_dem.tif,ASTGTMV003_N59W004_dem.tif,ASTGTMV003_N59W005_dem.tif,ASTGTMV003_N59W006_dem.tif,ASTGTMV003_N59W007_dem.tif`
+	// const available_tiffs2 = `ASTGTMV003_N55W003_dem.tif,ASTGTMV003_N55W004_dem.tif,ASTGTMV003_N55W005_dem.tif,ASTGTMV003_N56W003_dem.tif,ASTGTMV003_N56W004_dem.tif,ASTGTMV003_N56W005_dem.tif,ASTGTMV003_N57W003_dem.tif,ASTGTMV003_N57W004_dem.tif,ASTGTMV003_N57W005_dem.tif`
+	// const available_tiffs3 = `ASTGTMV003_N55W003_dem.tif,ASTGTMV003_N55W004_dem.tif,ASTGTMV003_N56W003_dem.tif,ASTGTMV003_N56W004_dem.tif`
+	// const available_tiffs4 = `ASTGTMV003_N56W005_dem.tif`
+	// const available_tiffs = available_tiffs4.split(",")
+	  
+	import { mountGeoTiff, getRelevantTiffNames } from "./mountainDataHandler.js";
+	
+	const available_tiffs = await getRelevantTiffNames();
 
       // create three.js scene+renderer and add camera+orbitcontrols
       import * as THREE from "three";
@@ -148,15 +50,15 @@
       animate();
 
       // load tiffs into scene and position correctly according to lat/long
-      try {
-      	available_tiffs.split("\n").map((filename) => {
-      		console.log("trying to mount", "/geotiff_data/" + filename);
-      		mountGeoTiff("/geotiff_data/" + filename, scene);
-      	})
-      } catch (e) {
-      	console.log("encountered error during loading", "/geotiff_data/" + filename)
-      	console.log(e)
-      }
+      	available_tiffs.map((filename) => {
+		  try {
+				console.log("trying to mount", "/geotiff_data/" + filename);
+				mountGeoTiff("/geotiff_data/" + filename, scene);
+		  } catch (e) {
+			console.log("encountered error during loading", "/geotiff_data/" + filename)
+			console.log(e)
+		  }
+      })
       console.log("script has logged off")
    </script>
 </html>
