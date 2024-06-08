@@ -25,17 +25,21 @@
       import * as THREE from "three";
       const scene = new THREE.Scene();
 
-      const renderer = new THREE.WebGLRenderer();
-      renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200000);
-      camera.position.z = 5000;
+	  camera.position.x = -36000;
+      camera.position.y = 3000;
+      camera.position.z = -9600;
 
       import {
       	OrbitControls
       } from "three/addons/controls/OrbitControls.js";
       const controls = new OrbitControls(camera, renderer.domElement);
+	  // controls.panSpeed = 10
+	  // controls.zoomSpeed = 10
 
       // define and start animation loop
       function animate() {

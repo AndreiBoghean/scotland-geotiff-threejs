@@ -12,6 +12,11 @@ import * as THREE from "three";
 	});
   }
 
+function longitudeDistAtLatitude(x)
+{
+	return 111.320 * Math.cos(x * 3.14159 / 180)
+}
+
   export function mountGeoTiff(url, scene) {
 	// get tif and load it
 	tiff_load(url).then(([tiff_image, data, BoundingBox]) => {
@@ -19,9 +24,15 @@ import * as THREE from "three";
 			type: "module"
 		})
 
+		const longitude = BoundingBox[1]
+		const latitude = -BoundingBox[0]
+		console.log("long:", longitude, "lat:", latitude)
 		// create suitable planeGeometry and add it to scene
+		// scale longest side to be 10000m
 		const scale = 10000 / Math.max(tiff_image.fileDirectory.ImageWidth, tiff_image.fileDirectory.ImageLength)
-		const geometry = new THREE.PlaneGeometry(scale * tiff_image.fileDirectory.ImageWidth, scale * tiff_image.fileDirectory.ImageLength, tiff_image.fileDirectory.ImageWidth - 1, tiff_image.fileDirectory.ImageLength - 1);
+		// find out how wide a degree of longitude is at this particular longitude
+		const ratio = 111.2 / longitudeDistAtLatitude(longitude)
+		const geometry = new THREE.PlaneGeometry(scale * tiff_image.fileDirectory.ImageWidth, ratio * scale * tiff_image.fileDirectory.ImageLength, tiff_image.fileDirectory.ImageWidth - 1, tiff_image.fileDirectory.ImageLength - 1);
 		const material = new THREE.MeshNormalMaterial({
 			side: THREE.DoubleSide
 		});
@@ -35,9 +46,6 @@ import * as THREE from "three";
 			geometry.attributes.position.needsUpdate = true;
 			geometry.computeVertexNormals(); // needed for meshnormalmaterial
 
-			const longitude = BoundingBox[1]
-			const latitude = -BoundingBox[0]
-			console.log("long:", longitude, "lat:", latitude)
 			scene.add(plane)
 			plane.translateY(plane.geometry.parameters.width * (longitude - 55));
 			plane.translateX(-plane.geometry.parameters.height * (latitude - 2));
