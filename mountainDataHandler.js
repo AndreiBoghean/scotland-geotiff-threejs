@@ -14,7 +14,7 @@ import * as THREE from "three";
 
 export function LatitudeDistAtlongitude(x)
 {
-	return 111.320 * Math.cos(x * 3.14159 / 180)
+	return 111.320 * Math.cos(x * 3.141592653589793 / 180)
 }
 
 export function latlongToCartesianXZ(latitude, longitude)
