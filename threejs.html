@@ -15,19 +15,30 @@
 	// const available_tiffs2 = `ASTGTMV003_N55W003_dem.tif,ASTGTMV003_N55W004_dem.tif,ASTGTMV003_N55W005_dem.tif,ASTGTMV003_N56W003_dem.tif,ASTGTMV003_N56W004_dem.tif,ASTGTMV003_N56W005_dem.tif,ASTGTMV003_N57W003_dem.tif,ASTGTMV003_N57W004_dem.tif,ASTGTMV003_N57W005_dem.tif`
 	// const available_tiffs3 = `ASTGTMV003_N55W003_dem.tif,ASTGTMV003_N55W004_dem.tif,ASTGTMV003_N56W003_dem.tif,ASTGTMV003_N56W004_dem.tif`
 	// const available_tiffs4 = `ASTGTMV003_N56W005_dem.tif`
+	// const available_tiffs = `ASTGTMV003_N56W005_dem.tif,ASTGTMV003_N56W004_dem.tif,ASTGTMV003_N57W005_dem.tif,ASTGTMV003_N57W004_dem.tif`.split(",")
 	// const available_tiffs = available_tiffs4.split(",")
 	  
-	import { mountGeoTiff, getRelevantTiffNames } from "./mountainDataHandler.js";
+	import { mountGeoTiff, getMountainData, getRelevantTiffNames, LatitudeDistAtlongitude, latlongToCartesianXZ } from "./mountainDataHandler.js";
 	
-	const available_tiffs = await getRelevantTiffNames();
+	const mountain_data = await getMountainData();
+	const available_tiffs = await getRelevantTiffNames(mountain_data);
 
-      // create three.js scene+renderer and add camera+orbitcontrols
+      // create three.js scene+renderers and add camera+orbitcontrols
       import * as THREE from "three";
       const scene = new THREE.Scene();
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
+	  
+	  /*
+	  // not needed; using HTML for HUD for the moment, but might need this later
+	  const cssRenderer = new THREE.CSS3DRenderer();
+	  cssRenderer.domElement.style.position = "absolute"
+	  cssRenderer.domElement.style.top = 0
+      cssRenderer.setSize(window.innerWidth, window.innerHeight);
+	  document.body.appendChild(cssRenderer.domElement)
+	  */
 
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200000);
 	  camera.position.x = -36000;
@@ -38,23 +49,22 @@
       	OrbitControls
       } from "three/addons/controls/OrbitControls.js";
       const controls = new OrbitControls(camera, renderer.domElement);
-	  // controls.panSpeed = 10
-	  // controls.zoomSpeed = 10
 
       // define and start animation loop
       function animate() {
       	requestAnimationFrame(animate);
 
-      	//plane.rotation.x += 0.01;
-      	//plane.rotation.y += 0.01;
-
       	controls.update();
       	renderer.render(scene, camera);
+      	// cssRenderer.render(scene, camera);
+		
+		let disp = document.getElementById("posThing")
+		if (disp != null) disp.textContent = `${camera.position.x}, ${camera.position.y}, ${camera.position.z}`;
       }
       animate();
 
       // load tiffs into scene and position correctly according to lat/long
-      	available_tiffs.map((filename) => {
+      available_tiffs.map((filename) => {
 		  try {
 				console.log("trying to mount", "/geotiff_data/" + filename);
 				mountGeoTiff("/geotiff_data/" + filename, scene);
@@ -63,6 +73,74 @@
 			console.log(e)
 		  }
       })
+	  
+	  // ensure threejs canvas overlaps with  our UI div
+	  renderer.domElement.style.position = "absolute"
+	  renderer.domElement.style.top = 0
+	  
+	  // set up UI overlay
+	  const UIcontainer = document.createElement("div")
+	  UIcontainer.style.position = "absolute"
+	  UIcontainer.style.top = 0
+	  UIcontainer.style.zIndex = 99
+	  document.body.appendChild(UIcontainer)
+	  
+	  // populate with mountain buttons
+		  const testBtn = document.createElement("button")
+		  testBtn.style.display = "block"
+		  testBtn.textContent = "unknown"
+		  testBtn.id = "posThing"
+		  UIcontainer.appendChild(testBtn)
+	  
+	  mountain_data.slice(1).forEach( (row) => {
+		  const testBtn = document.createElement("button")
+		  testBtn.style.display = "block"
+		  testBtn.textContent = row[1]
+		  UIcontainer.appendChild(testBtn)
+		  
+		  const [longitude,latitude,_] = row[5].split(";")
+		  testBtn.onclick = (e) => {
+			  console.log("we've been clicked mr krabs")
+
+			  /*
+			  // camera.position.x = 10000 * (longitude - 55);
+			  const newZ = 10000 * longitude;
+			  // camera.position.y = 10000 * (latitude - 2) * 111.2 / LatitudeDistAtlongitude(longitude);
+			  const newX = 10000 * latitude * 111.2 / LatitudeDistAtlongitude(longitude);
+			  const newY = 800;
+			  */
+			  
+			  const [newX, newZ] = latlongToCartesianXZ(latitude, longitude)
+			  const newY = 1
+			  
+			  controls.target.set(newX, newY, newZ)
+			  controls.update()
+			  
+			  const bolGeom = new THREE.SphereGeometry(1, 32, 16)
+			  const bolMat = new THREE.MeshBasicMaterial( { color: 0xff0000 } )
+			  const bol = new THREE.Mesh( bolGeom, bolMat )
+			  
+			  bol.position.x = newX
+			  bol.position.y = newY
+			  bol.position.z = newZ
+			  
+			  scene.add(bol)
+			  
+			  const axesHelper = new THREE.AxesHelper( 100000 );
+			  axesHelper.position.x = newX
+			  axesHelper.position.y = newY
+			  axesHelper.position.z = newZ
+			  scene.add( axesHelper )
+
+			  // camera.position.x = newX
+			  // camera.position.y = newY
+			  // camera.position.z = newZ
+		  
+			  console.log("lat,long", latitude, longitude, "targeting:", newX, newY, newZ)
+		  }
+	  } )
+	  
+	  
       console.log("script has logged off")
    </script>
 </html>
