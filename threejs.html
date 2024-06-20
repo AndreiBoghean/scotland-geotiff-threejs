@@ -18,11 +18,8 @@
 	// const available_tiffs = `ASTGTMV003_N56W005_dem.tif,ASTGTMV003_N56W004_dem.tif,ASTGTMV003_N57W005_dem.tif,ASTGTMV003_N57W004_dem.tif`.split(",")
 	// const available_tiffs = available_tiffs4.split(",")
 	  
-	import { mountGeoTiff, getMountainData, getRelevantTiffNames, LatitudeDistAtlongitude, latlongToCartesianXZ } from "./mountainDataHandler.js";
+	import { mountGeoTiff, getMountainData, getRelevantTiffNames, longitudeDistAtLatitude, latlongToCartesianXZ } from "./mountainDataHandler.js";
 	
-	const mountain_data = await getMountainData();
-	const available_tiffs = await getRelevantTiffNames(mountain_data);
-
       // create three.js scene+renderers and add camera+orbitcontrols
       import * as THREE from "three";
       const scene = new THREE.Scene();
@@ -41,9 +38,8 @@
 	  */
 
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200000);
-	  camera.position.x = -36000;
-      camera.position.y = 3000;
-      camera.position.z = -9600;
+	  [camera.position.x, camera.position.z] = latlongToCartesianXZ(55, -4)
+	  
 
       import {
       	OrbitControls
@@ -63,84 +59,102 @@
       }
       animate();
 
-      // load tiffs into scene and position correctly according to lat/long
+	  const mountain_data = await getMountainData();
+	  const available_tiffs = await getRelevantTiffNames(mountain_data);
+
+      // send off web workers to load tiffs into scene and position correctly according to lat/long
       available_tiffs.map((filename) => {
 		  try {
 				console.log("trying to mount", "/geotiff_data/" + filename);
-				mountGeoTiff("/geotiff_data/" + filename, scene);
+				mountGeoTiff("/geotiff_data/" + filename, scene, controls);
 		  } catch (e) {
 			console.log("encountered error during loading", "/geotiff_data/" + filename)
 			console.log(e)
 		  }
       })
 	  
-	  // ensure threejs canvas overlaps with  our UI div
+	  // while the web workers are going... ensure threejs canvas overlaps with our UI div and set up UI overlay
 	  renderer.domElement.style.position = "absolute"
 	  renderer.domElement.style.top = 0
 	  
-	  // set up UI overlay
 	  const UIcontainer = document.createElement("div")
+	  UIcontainer.id = "UIcontainer"
 	  UIcontainer.style.position = "absolute"
 	  UIcontainer.style.top = 0
 	  UIcontainer.style.zIndex = 99
 	  document.body.appendChild(UIcontainer)
 	  
-	  // populate with mountain buttons
+	  export function gimmeButton(txt, newX, newY, newZ) // assumes "controls" and "scene" exist in the local scope
+	  {
+		  const UIcontainer = document.getElementById("UIcontainer")
+		  
 		  const testBtn = document.createElement("button")
 		  testBtn.style.display = "block"
-		  testBtn.textContent = "unknown"
-		  testBtn.id = "posThing"
-		  UIcontainer.appendChild(testBtn)
-	  
-	  mountain_data.slice(1).forEach( (row) => {
-		  const testBtn = document.createElement("button")
-		  testBtn.style.display = "block"
-		  testBtn.textContent = row[1]
+		  testBtn.textContent = txt
 		  UIcontainer.appendChild(testBtn)
 		  
-		  const [longitude,latitude,_] = row[5].split(";")
 		  testBtn.onclick = (e) => {
 			  console.log("we've been clicked mr krabs")
 
-			  /*
-			  // camera.position.x = 10000 * (longitude - 55);
-			  const newZ = 10000 * longitude;
-			  // camera.position.y = 10000 * (latitude - 2) * 111.2 / LatitudeDistAtlongitude(longitude);
-			  const newX = 10000 * latitude * 111.2 / LatitudeDistAtlongitude(longitude);
-			  const newY = 800;
-			  */
-			  
-			  const [newX, newZ] = latlongToCartesianXZ(latitude, longitude)
-			  const newY = 1
-			  
 			  controls.target.set(newX, newY, newZ)
 			  controls.update()
 			  
-			  const bolGeom = new THREE.SphereGeometry(1, 32, 16)
+			  const bolGeom = new THREE.SphereGeometry(1/20, 32, 16)
 			  const bolMat = new THREE.MeshBasicMaterial( { color: 0xff0000 } )
 			  const bol = new THREE.Mesh( bolGeom, bolMat )
-			  
-			  bol.position.x = newX
-			  bol.position.y = newY
-			  bol.position.z = newZ
-			  
+			  bol.position.set(newX, newY, newZ)
 			  scene.add(bol)
 			  
 			  const axesHelper = new THREE.AxesHelper( 100000 );
-			  axesHelper.position.x = newX
-			  axesHelper.position.y = newY
-			  axesHelper.position.z = newZ
+			  axesHelper.position.set(newX, newY, newZ)
 			  scene.add( axesHelper )
 
-			  // camera.position.x = newX
-			  // camera.position.y = newY
-			  // camera.position.z = newZ
-		  
-			  console.log("lat,long", latitude, longitude, "targeting:", newX, newY, newZ)
+			  console.log("targeting:", newX, newY, newZ)
 		  }
+		 testBtn.click()
+	  }
+	  
+	  // populate with mountain buttons
+	  
+	  // utility button first
+	  const testBtn = document.createElement("button")
+	  testBtn.style.display = "block"
+	  testBtn.textContent = "unknown"
+	  testBtn.id = "posThing"
+	  UIcontainer.appendChild(testBtn)
+	  testBtn.onclick = (e) => {
+		  console.log("we've been clicked mr krabs")
+		  const [newX, newY, newZ] = prompt("where u want 2 go?").split(", ")
+		  
+		  controls.target.set(newX, newY, newZ)
+		  controls.update()
+		  
+		  const bolGeom = new THREE.SphereGeometry(1/20, 32, 16)
+		  const bolMat = new THREE.MeshBasicMaterial( { color: 0xff0000 } )
+		  const bol = new THREE.Mesh( bolGeom, bolMat )
+		  
+		  bol.position.set(newX, newY, newZ)
+		  
+		  scene.add(bol)
+		  
+		  const axesHelper = new THREE.AxesHelper( 100000 );
+		  axesHelper.position.set(newX, newY, newZ)
+		  scene.add( axesHelper )
+
+		  console.log("targeting:", newX, newY, newZ)
+		}
+	  
+	  // actual mountains from the csv data
+	  mountain_data.slice(1).forEach( (row) => {
+		  const [latitude,longitude,_] = row[5].split(";")
+		  const [newX, newZ] = latlongToCartesianXZ(latitude, longitude)
+		  const newY = -1
+		  
+		  gimmeButton(row[1], newX, newY, newZ, controls, scene)
+		  
 	  } )
 	  
 	  
-      console.log("script has logged off")
+      console.log("top-level script is done")
    </script>
 </html>
